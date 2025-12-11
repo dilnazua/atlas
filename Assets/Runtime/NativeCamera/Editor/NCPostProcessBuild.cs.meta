@@ -1,0 +1,19 @@
+fileFormatVersion: 2
+guid: fa3b57e342928704cb910789ae4dde20
+timeCreated: 1521452119
+licenseType: Store
+MonoImporter:
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 117802
+  packageName: Native Camera for Android & iOS
+  packageVersion: 1.5.0
+  assetPath: Assets/Plugins/NativeCamera/Editor/NCPostProcessBuild.cs
+  uploadId: 746912

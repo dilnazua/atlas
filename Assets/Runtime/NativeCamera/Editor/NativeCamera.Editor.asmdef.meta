@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 31117d0234af0084b91a7e53b3d9e0a3
+AssemblyDefinitionImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 117802
+  packageName: Native Camera for Android & iOS
+  packageVersion: 1.5.0
+  assetPath: Assets/Plugins/NativeCamera/Editor/NativeCamera.Editor.asmdef
+  uploadId: 746912

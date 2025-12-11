@@ -1,0 +1,19 @@
+fileFormatVersion: 2
+guid: b2bbe0051e738ea4585119c46d863f19
+timeCreated: 1545147258
+licenseType: Store
+MonoImporter:
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 117802
+  packageName: Native Camera for Android & iOS
+  packageVersion: 1.5.0
+  assetPath: Assets/Plugins/NativeCamera/Android/NCCallbackHelper.cs
+  uploadId: 746912

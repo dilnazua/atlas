@@ -210,6 +210,39 @@ public class ARTemplateMenuManager : MonoBehaviour
         set => XRInputReaderUtility.SetInputProperty(ref m_DragCurrentPositionInput, value, this);
     }
 
+    [SerializeField]
+    [Tooltip("Panel that displays the welcome message.")]
+    private GameObject m_WelcomePanel;
+
+    [SerializeField]
+    [Tooltip("Panel for uploading photos.")]
+    private GameObject m_UploadPanel;
+
+    [SerializeField]
+    [Tooltip("Button to continue to the upload panel.")]
+    private Button m_ContinueButton;
+
+    [SerializeField]
+    [Tooltip("Button to take a photo.")]
+    private Button m_TakePhotoButton;
+
+    [SerializeField]
+    [Tooltip("Button to upload a photo from the gallery.")]
+    private Button m_UploadFromGalleryButton;
+
+    [SerializeField]
+    [Tooltip("Reference to the PhotoManager component that handles photo operations.")]
+    private PhotoManager m_PhotoManager;
+
+    /// <summary>
+    /// Reference to the PhotoManager component that handles photo operations.
+    /// </summary>
+    public PhotoManager photoManager
+    {
+        get => m_PhotoManager;
+        set => m_PhotoManager = value;
+    }
+
     bool m_IsPointerOverUI;
     bool m_ShowObjectMenu;
     bool m_ShowOptionsModal;
@@ -227,6 +260,14 @@ public class ARTemplateMenuManager : MonoBehaviour
         m_CancelButton.onClick.AddListener(HideMenu);
         m_DeleteButton.onClick.AddListener(DeleteFocusedObject);
         m_PlaneManager.trackablesChanged.AddListener(OnPlaneChanged);
+
+        // Add listeners for welcome/upload panel buttons
+        if (m_ContinueButton != null)
+            m_ContinueButton.onClick.AddListener(ShowUploadPanel);
+        if (m_TakePhotoButton != null)
+            m_TakePhotoButton.onClick.AddListener(TakePhoto);
+        if (m_UploadFromGalleryButton != null)
+            m_UploadFromGalleryButton.onClick.AddListener(UploadFromGallery);
     }
 
     /// <summary>
@@ -239,6 +280,14 @@ public class ARTemplateMenuManager : MonoBehaviour
         m_CancelButton.onClick.RemoveListener(HideMenu);
         m_DeleteButton.onClick.RemoveListener(DeleteFocusedObject);
         m_PlaneManager.trackablesChanged.RemoveListener(OnPlaneChanged);
+
+        // Remove listeners for welcome/upload panel buttons
+        if (m_ContinueButton != null)
+            m_ContinueButton.onClick.RemoveListener(ShowUploadPanel);
+        if (m_TakePhotoButton != null)
+            m_TakePhotoButton.onClick.RemoveListener(TakePhoto);
+        if (m_UploadFromGalleryButton != null)
+            m_UploadFromGalleryButton.onClick.RemoveListener(UploadFromGallery);
     }
 
     /// <summary>
@@ -254,6 +303,12 @@ public class ARTemplateMenuManager : MonoBehaviour
         InitializeDebugMenuOffsets();
         HideMenu();
         m_PlaneManager.planePrefab = m_DebugPlane;
+
+        // Initialize welcome/upload panels
+        if (m_WelcomePanel != null)
+            m_WelcomePanel.SetActive(true);
+        if (m_UploadPanel != null)
+            m_UploadPanel.SetActive(false);
     }
 
     /// <summary>
@@ -540,6 +595,54 @@ public class ARTemplateMenuManager : MonoBehaviour
                     visualizer.visualizeSurfaces = (m_DebugPlaneSlider.value != 0);
                 }
             }
+        }
+    }
+
+    /// <summary>
+    /// Shows the upload panel and hides the welcome panel.
+    /// </summary>
+    private void ShowUploadPanel()
+    {
+        if (m_WelcomePanel != null)
+            m_WelcomePanel.SetActive(false);
+        if (m_UploadPanel != null)
+            m_UploadPanel.SetActive(true);
+    }
+
+    /// <summary>
+    /// Handles taking a photo using the device camera.
+    /// </summary>
+    private void TakePhoto()
+    {
+        if (m_WelcomePanel != null)
+            m_WelcomePanel.SetActive(false);
+        
+        if (m_PhotoManager != null)
+        {
+            m_PhotoManager.TakePhoto();
+        }
+        else
+        {
+            Debug.LogWarning("PhotoManager is not assigned! Please assign it in the inspector.");
+        }
+    }
+
+    /// <summary>
+    /// Handles uploading a photo from the device gallery.
+    /// </summary>
+    private void UploadFromGallery()
+    {
+        if (m_WelcomePanel != null)
+            m_WelcomePanel.SetActive(false);
+        
+        // Call PhotoManager to handle picking photos from gallery
+        if (m_PhotoManager != null)
+        {
+            m_PhotoManager.PickMultipleFromGallery();
+        }
+        else
+        {
+            Debug.LogWarning("PhotoManager is not assigned! Please assign it in the inspector.");
         }
     }
 }
