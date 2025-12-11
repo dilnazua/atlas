@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: b107fd1956cb3e04985108f5ee29e115
+AssemblyDefinitionImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 117802
+  packageName: Native Camera for Android & iOS
+  packageVersion: 1.5.0
+  assetPath: Assets/Plugins/NativeCamera/NativeCamera.Runtime.asmdef
+  uploadId: 746912
