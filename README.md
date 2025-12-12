@@ -2,7 +2,7 @@
 
 Atlas is a Unity-based mobile AR application that enables users to reconstruct 3D objects from photos and place them in augmented reality space. The application captures or uploads multiple images, processes them through a backend API for 3D reconstruction, and then renders the resulting 3D models in AR.
 
-## 🎯 Project Overview
+## Project Overview
 
 Atlas combines mobile AR technology with photogrammetry-based 3D reconstruction to create an immersive experience where users can:
 - Capture or upload multiple photos of real-world objects
@@ -10,7 +10,7 @@ Atlas combines mobile AR technology with photogrammetry-based 3D reconstruction 
 - View and interact with reconstructed 3D models in augmented reality
 - Place models accurately in 3D space using AR plane detection
 
-## ✨ Features
+## Features
 
 ### Core Functionality
 - **Photo Capture**: Take photos directly using the device camera
@@ -49,7 +49,7 @@ Atlas combines mobile AR technology with photogrammetry-based 3D reconstruction 
 - Unity Editor (see Requirements)
 - Platform-specific AR SDKs (ARCore/ARKit)
 
-## 📋 Requirements
+## Requirements
 
 ### Development
 - **Unity Version**: Compatible with Unity 2022.3 LTS or later (project uses URP 17.2.0)
@@ -72,7 +72,7 @@ Atlas combines mobile AR technology with photogrammetry-based 3D reconstruction 
 - Valid API key for authentication
 - Network connectivity for uploads and downloads
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Installation
 
@@ -154,7 +154,7 @@ atlas/
 └── README.md                               # This file
 ```
 
-## 🔧 Configuration
+## Configuration
 
 ### API Configuration
 
@@ -185,7 +185,7 @@ Configure AR Foundation settings in:
 - Edit → Project Settings → XR Plug-in Management → ARCore/ARKit
 - Adjust plane detection, image tracking, and other AR features as needed
 
-## 📡 API Integration
+## API Integration
 
 ### API Endpoints
 
@@ -271,7 +271,7 @@ options: {"resolution_level": 2}
    - Select objects to delete them
    - Use debug menu for development tools
 
-## 🔍 Key Components
+## Key Components
 
 ### PhotoManager
 Handles all photo-related operations:
@@ -299,48 +299,8 @@ UI and interaction management:
 - Welcome and upload panel navigation
 - AR plane visualization control
 
-## 🐛 Debugging
 
-### Enable Debug Features
-
-1. **AR Plane Visualization**
-   - Open Options/Modal menu in app
-   - Toggle "Show Debug Planes" to visualize detected surfaces
-
-2. **AR Debug Menu**
-   - Enable debug menu slider in options
-   - View AR session information, configurations, and stats
-
-3. **Unity Console**
-   - Check Unity Console for detailed logs
-   - PhotoManager and ModelManager provide extensive logging
-
-### Common Issues
-
-**AR Not Working:**
-- Ensure device supports ARCore (Android) or ARKit (iOS)
-- Check that ARCore is installed on Android device
-- Verify camera permissions are granted
-
-**Photos Not Uploading:**
-- Check API Base URL is correctly configured
-- Verify API key is valid
-- Check network connectivity
-- Review Unity Console for error messages
-
-**Models Not Loading:**
-- Verify GLB loading is enabled in ModelManager
-- Check that glTFast package is installed
-- Ensure API returns valid GLB files
-- Check file path and permissions
-
-**No AR Planes Detected:**
-- Ensure good lighting conditions
-- Move device slowly to allow plane detection
-- Check that surfaces have sufficient texture
-- Verify AR Foundation is properly configured
-
-## 🔒 Permissions
+## Permissions
 
 The application requires the following permissions:
 
@@ -354,24 +314,6 @@ The application requires the following permissions:
 - `WRITE_EXTERNAL_STORAGE`: Save downloaded models (if needed)
 - `INTERNET`: Network access for API calls
 
-## 📝 License
-
-[Add your license information here]
-
-## 🤝 Contributing
-
-[Add contribution guidelines if applicable]
-
-## 📧 Support
-
-[Add support contact information]
-
-## 🙏 Acknowledgments
-
-- Unity Technologies for AR Foundation and XR Interaction Toolkit
-- Andreas Atteneder for glTFast
-- Mobile AR Template contributors
-- [Add other acknowledgments]
 
 ## 📚 Additional Resources
 
@@ -383,6 +325,3 @@ The application requires the following permissions:
 
 ---
 
-**Last Updated**: [Current Date]
-**Unity Version**: 2022.3 LTS (or compatible)
-**AR Foundation Version**: 6.2.0
