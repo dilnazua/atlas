@@ -243,7 +243,7 @@ options: {"resolution_level": 2}
 }
 ```
 
-## 🎮 Usage
+## Usage
 
 ### User Workflow
 
@@ -315,7 +315,7 @@ The application requires the following permissions:
 - `INTERNET`: Network access for API calls
 
 
-## 📚 Additional Resources
+## Additional Resources
 
 - [Unity AR Foundation Documentation](https://docs.unity3d.com/Packages/com.unity.xr.arfoundation@latest)
 - [XR Interaction Toolkit Documentation](https://docs.unity3d.com/Packages/com.unity.xr.interaction.toolkit@latest)
