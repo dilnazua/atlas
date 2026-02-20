@@ -67,6 +67,8 @@ public class PhotoManager : MonoBehaviour
     public Button takePhotoButton;
     public Button uploadButton;
     public Text statusText;
+    public GameObject progressBar;
+    public GameObject FailureText;
     
     [Header("API Configuration")]
     [Tooltip("Your API base URL (configure in Unity Inspector)")]
@@ -111,6 +113,37 @@ public class PhotoManager : MonoBehaviour
     {
         return Application.platform == RuntimePlatform.Android || 
                Application.platform == RuntimePlatform.IPhonePlayer;
+    }
+    
+    /// <summary>
+    /// Shows the failure UI text with the given message (e.g. when model generation fails).
+    /// Hides it again after 5 seconds.
+    /// </summary>
+    private void ShowFailure(string message)
+    {
+        if (FailureText != null)
+        {
+            FailureText.gameObject.SetActive(true);
+            StartCoroutine(HideFailureAfterSeconds(5f));
+        }
+    }
+    
+    /// <summary>
+    /// Waits for the given seconds then hides the failure text (used by ShowFailure).
+    /// </summary>
+    private IEnumerator HideFailureAfterSeconds(float seconds)
+    {
+        yield return new WaitForSeconds(seconds);
+        HideFailure();
+    }
+    
+    /// <summary>
+    /// Hides the failure UI text (call when starting a new upload).
+    /// </summary>
+    private void HideFailure()
+    {
+        if (FailureText != null)
+            FailureText.gameObject.SetActive(false);
     }
 
     void Start()
@@ -413,12 +446,21 @@ public class PhotoManager : MonoBehaviour
         if (statusText != null)
             statusText.text = "Uploading photos...";
         
+        HideFailure();
+        
+        if (progressBar != null)
+        {
+            progressBar.GetComponent<Slider>().value = 0;
+            progressBar.gameObject.SetActive(true);
+        }
+        
         // Validate API endpoint
         if (string.IsNullOrEmpty(apiBaseUrl) || apiBaseUrl.Contains("YOUR_API_URL") || apiBaseUrl.Contains("YOUR_IP") || apiBaseUrl.Contains("YOUR_API"))
         {
             Debug.LogError($"Invalid API Base URL: {apiBaseUrl}. Please set a valid URL in the PhotoManager component.");
             if (statusText != null)
                 statusText.text = "Error: API endpoint not configured";
+            ShowFailure("Error: API endpoint not configured");
             yield break;
         }
         
@@ -510,7 +552,8 @@ public class PhotoManager : MonoBehaviour
                 {
                     Debug.LogError("Failed to parse job creation response or missing job_id");
                     if (statusText != null)
-                        statusText.text = "Error: Invalid response from API";
+                        statusText.text = "Model Failed";
+                    ShowFailure("Model Failed");
                 }
             }
             else
@@ -532,7 +575,8 @@ public class PhotoManager : MonoBehaviour
             }
             
             if (statusText != null)
-                statusText.text = $"Upload Failed: {www.error}";
+                statusText.text = "Model Failed";
+            ShowFailure("Model Failed");
             
             // Provide helpful error messages
             if (www.result == UnityWebRequest.Result.ConnectionError)
@@ -572,11 +616,15 @@ public class PhotoManager : MonoBehaviour
             {
                 Debug.LogError("Failed to get job status");
                 if (statusText != null)
-                    statusText.text = "Error: Failed to get job status";
+                    statusText.text = "Model Failed";
+                ShowFailure("Model Failed");
                 yield break;
             }
             
             Debug.Log($"Job Status: {statusResponse.status}, Progress: {statusResponse.progress:F1}%, Stage: {statusResponse.stage ?? "N/A"}");
+            
+            if (progressBar != null)
+                progressBar.GetComponent<Slider>().value = statusResponse.progress / 100f;
             
             if (statusText != null)
             {
@@ -590,6 +638,8 @@ public class PhotoManager : MonoBehaviour
             if (statusResponse.status == "completed")
             {
                 Debug.Log("Job completed! Downloading artifact...");
+                if (progressBar != null)
+                    progressBar.GetComponent<Slider>().value = 1f;
                 if (statusText != null)
                     statusText.text = "Job completed! Downloading model...";
                 
@@ -599,11 +649,16 @@ public class PhotoManager : MonoBehaviour
             }
             else if (statusResponse.status == "failed")
             {
-                string errorMsg = !string.IsNullOrEmpty(statusResponse.message) ? statusResponse.message : "Unknown error";
+                string errorMsg = !string.IsNullOrEmpty(statusResponse.message) ? statusResponse.message : "Model Failed";
                 Debug.LogError($"Job failed: {errorMsg}");
-
+                if (progressBar != null)
+                {
+                    progressBar.GetComponent<Slider>().value = 0;
+                    progressBar.gameObject.SetActive(false);
+                }
                 if (statusText != null)
-                    statusText.text = $"Job failed: {errorMsg}";
+                    statusText.text = "Model Failed";
+                ShowFailure(errorMsg);
                 
                 yield break;
             }
@@ -614,8 +669,11 @@ public class PhotoManager : MonoBehaviour
         }
         
         Debug.LogError($"Timeout: Job did not complete within {maxWaitTime} seconds");
+        if (progressBar != null)
+            progressBar.gameObject.SetActive(false);
         if (statusText != null)
-            statusText.text = $"Timeout: Job took longer than {maxWaitTime}s";
+            statusText.text = "Model Failed";
+        ShowFailure("Model Failed");
     }
     
     /// <summary>
@@ -701,8 +759,15 @@ public class PhotoManager : MonoBehaviour
             {
                 Debug.LogWarning("ModelManager not assigned! GLB downloaded but won't be loaded.");
                 if (statusText != null)
-                    statusText.text = "GLB downloaded but ModelManager not configured";
+                    statusText.text = "Model Failed";
+                ShowFailure("Model Failed");
             }
+            // Show failure if ModelManager reported failure (e.g. GLB load failed)
+            if (statusText != null && statusText.text.IndexOf("Failed", StringComparison.OrdinalIgnoreCase) >= 0)
+                ShowFailure(statusText.text);
+            // Always hide progress bar after model is generated (or load attempt finished)
+            if (progressBar != null)
+                progressBar.gameObject.SetActive(false);
         }
         else
         {
@@ -714,7 +779,10 @@ public class PhotoManager : MonoBehaviour
                 Debug.LogError($"Error Response: {www.downloadHandler.text}");
             }
             if (statusText != null)
-                statusText.text = $"Download failed: {www.error}";
+                statusText.text = "Model Failed";
+            ShowFailure("Model Failed");
+            if (progressBar != null)
+                progressBar.gameObject.SetActive(false);
         }
     }
     

@@ -8,6 +8,8 @@ using UnityEngine.XR.ARFoundation;
 using UnityEngine.XR.ARSubsystems;
 #endif
 using UnityEngine.XR.Interaction.Toolkit.Samples.StarterAssets;
+using UnityEngine.XR.Interaction.Toolkit.Interactables;
+using UnityEngine.XR.Interaction.Toolkit.Transformers;
 #if GLTFAST
 using GLTFast;
 using GLTFast.Materials;
@@ -85,7 +87,7 @@ public class ModelManager : MonoBehaviour
         {
             Debug.LogError($"GLB file not found: {glbFilePath}");
             if (statusText != null)
-                statusText.text = "Error: GLB file not found";
+                statusText.text = "Model Failed";
             yield break;
         }
         
@@ -98,7 +100,7 @@ public class ModelManager : MonoBehaviour
             Debug.LogError("GLB loading is enabled but glTFast package is not installed!");
             
             if (statusText != null)
-                statusText.text = "Error: GLB loader not installed";
+                statusText.text = "Model Failed";
             
             // Fallback to placeholder
             yield return StartCoroutine(SpawnPlaceholderModel(statusText));
@@ -338,16 +340,77 @@ public class ModelManager : MonoBehaviour
                 spawnedModel.transform.Rotate(response.model_data.rotation);
             }
             
+            // Scale model to 70% of current size
+            Vector3 currentScale = spawnedModel.transform.localScale;
+            spawnedModel.transform.localScale = currentScale * 0.7f;
+            
+            EnsureMovableAndScalable(spawnedModel);
             Debug.Log($"Model '{modelPrefab.name}' spawned successfully at: {spawnPosition}");
         }
         else
         {
             Debug.LogError("No model prefab found for API response. Check model_type or modelPrefabs list.");
             if (statusText != null)
-                statusText.text = "Error: Model prefab not found";
+                statusText.text = "Model Failed";
         }
         
         yield return null;
+    }
+    
+    /// <summary>
+    /// Ensures the given object can be moved and scaled like AR template objects (XR Grab Interactable + transformers).
+    /// Safe to call on objects that already have these components.
+    /// </summary>
+    private void EnsureMovableAndScalable(GameObject root)
+    {
+        if (root == null) return;
+        
+        var grab = root.GetComponent<XRGrabInteractable>();
+        if (grab != null)
+        {
+            // Already has grab interactable; ensure scale transformer exists for two-hand scaling
+            if (root.GetComponent<XRGeneralGrabTransformer>() == null)
+            {
+                var existingScaleTransformer = root.AddComponent<XRGeneralGrabTransformer>();
+                existingScaleTransformer.allowTwoHandedScaling = true;
+                existingScaleTransformer.clampScaling = true;
+                existingScaleTransformer.minimumScaleRatio = 0.25f;
+                existingScaleTransformer.maximumScaleRatio = 2f;
+            }
+            return;
+        }
+        
+        if (root.GetComponent<Rigidbody>() == null)
+        {
+            var rb = root.AddComponent<Rigidbody>();
+            rb.useGravity = false;
+            rb.isKinematic = true;
+        }
+        
+        if (root.GetComponentInChildren<Collider>() == null)
+        {
+            var renderers = root.GetComponentsInChildren<Renderer>();
+            if (renderers != null && renderers.Length > 0)
+            {
+                Bounds combined = renderers[0].bounds;
+                for (int i = 1; i < renderers.Length; i++)
+                    combined.Encapsulate(renderers[i].bounds);
+                var bc = root.AddComponent<BoxCollider>();
+                bc.center = root.transform.InverseTransformPoint(combined.center);
+                Vector3 lossy = root.transform.lossyScale;
+                bc.size = new Vector3(
+                    Mathf.Abs(lossy.x) > 0.0001f ? combined.size.x / lossy.x : combined.size.x,
+                    Mathf.Abs(lossy.y) > 0.0001f ? combined.size.y / lossy.y : combined.size.y,
+                    Mathf.Abs(lossy.z) > 0.0001f ? combined.size.z / lossy.z : combined.size.z);
+            }
+        }
+        
+        grab = root.AddComponent<XRGrabInteractable>();
+        var scaleTransformer = root.AddComponent<XRGeneralGrabTransformer>();
+        scaleTransformer.allowTwoHandedScaling = true;
+        scaleTransformer.clampScaling = true;
+        scaleTransformer.minimumScaleRatio = 0.25f;
+        scaleTransformer.maximumScaleRatio = 2f;
     }
     
     /// <summary>
@@ -529,6 +592,11 @@ public class ModelManager : MonoBehaviour
                     modelContainer.transform.SetParent(modelParent);
                 }
                 
+                // Scale model to 10x smaller (0.1x scale)
+                modelContainer.transform.localScale = Vector3.one * 0.7f;
+                
+                EnsureMovableAndScalable(modelContainer);
+                
                 if (statusText != null)
                     statusText.text = "Model loaded successfully!";
                 
@@ -538,7 +606,7 @@ public class ModelManager : MonoBehaviour
             {
                 Debug.LogError("Failed to instantiate GLB model");
                 if (statusText != null)
-                    statusText.text = "Error: Failed to instantiate model";
+                    statusText.text = "Model Failed";
                 Destroy(modelContainer);
                 
                 // Fallback to placeholder
@@ -549,7 +617,7 @@ public class ModelManager : MonoBehaviour
         {
             Debug.LogError("Failed to load GLB file");
             if (statusText != null)
-                statusText.text = "Error: Failed to load GLB file";
+                statusText.text = "Model Failed";
             Destroy(modelContainer);
             
             // Fallback to placeholder

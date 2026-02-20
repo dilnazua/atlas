@@ -101,3 +101,6 @@ InitTestScene*.unity*
 # Unity recovery/backup files (auto-generated)
 /[Aa]ssets/_[Rr]ecovery/
 /[Aa]ssets/_[Rr]ecovery.meta
+
+# macOS
+.DS_Store
