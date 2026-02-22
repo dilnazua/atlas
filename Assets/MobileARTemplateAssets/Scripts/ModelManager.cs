@@ -31,10 +31,10 @@ public class ModelManager : MonoBehaviour
     public Vector3 defaultSpawnOffset = new Vector3(0, 0, 2f);
     
     [Tooltip("Minimum distance from camera to spawn model")]
-    public float minSpawnDistance = 1f;
+    public float minSpawnDistance = 0.2f;
     
     [Tooltip("Maximum distance from camera to spawn model")]
-    public float maxSpawnDistance = 5f;
+    public float maxSpawnDistance = 1.5f;
     
     [Header("GLB Model Loading")]
     [Tooltip("Enable if a GLB runtime loader installed")]
@@ -342,8 +342,9 @@ public class ModelManager : MonoBehaviour
             
             // Scale model to 70% of current size
             Vector3 currentScale = spawnedModel.transform.localScale;
-            spawnedModel.transform.localScale = currentScale * 0.7f;
+            spawnedModel.transform.localScale = currentScale * 0.5f;
             
+            EnableDoubleSidedRendering(spawnedModel);
             EnsureMovableAndScalable(spawnedModel);
             Debug.Log($"Model '{modelPrefab.name}' spawned successfully at: {spawnPosition}");
         }
@@ -358,28 +359,53 @@ public class ModelManager : MonoBehaviour
     }
     
     /// <summary>
-    /// Ensures the given object can be moved and scaled like AR template objects (XR Grab Interactable + transformers).
+    /// Disables backface culling on every material so both sides of each polygon
+    /// are rendered. Fixes the common "invisible back side" problem with imported models.
+    /// </summary>
+    private void EnableDoubleSidedRendering(GameObject root)
+    {
+        if (root == null) return;
+
+        foreach (var renderer in root.GetComponentsInChildren<Renderer>(true))
+        {
+            foreach (var mat in renderer.materials)
+            {
+                if (mat == null) continue;
+
+                // _Cull: 0 = Off (double-sided), 1 = Front, 2 = Back (Unity default)
+                if (mat.HasProperty("_Cull"))
+                {
+                    mat.SetFloat("_Cull", 0f);
+                }
+                else
+                {
+                    mat.SetInt("_Cull", 0);
+                }
+
+                // URP "Render Face" enum: 0 = Front, 1 = Back, 2 = Both
+                if (mat.HasProperty("_RenderFace"))
+                {
+                    mat.SetFloat("_RenderFace", 2f);
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Configures the object exactly like the AR demo prefabs (Cube, Arch, etc.):
+    /// ARTransformer for plane-constrained movement/scaling, dynamic attach so grab
+    /// doesn't teleport the object, and no rotation matching so the model keeps its
+    /// original orientation when dragged.
     /// Safe to call on objects that already have these components.
     /// </summary>
     private void EnsureMovableAndScalable(GameObject root)
     {
         if (root == null) return;
         
-        var grab = root.GetComponent<XRGrabInteractable>();
-        if (grab != null)
-        {
-            // Already has grab interactable; ensure scale transformer exists for two-hand scaling
-            if (root.GetComponent<XRGeneralGrabTransformer>() == null)
-            {
-                var existingScaleTransformer = root.AddComponent<XRGeneralGrabTransformer>();
-                existingScaleTransformer.allowTwoHandedScaling = true;
-                existingScaleTransformer.clampScaling = true;
-                existingScaleTransformer.minimumScaleRatio = 0.25f;
-                existingScaleTransformer.maximumScaleRatio = 2f;
-            }
+        if (root.GetComponent<XRGrabInteractable>() != null)
             return;
-        }
         
+        // --- Rigidbody (kinematic, no gravity) ---
         if (root.GetComponent<Rigidbody>() == null)
         {
             var rb = root.AddComponent<Rigidbody>();
@@ -387,6 +413,7 @@ public class ModelManager : MonoBehaviour
             rb.isKinematic = true;
         }
         
+        // --- Collider (needed for touch raycasts to hit the model) ---
         if (root.GetComponentInChildren<Collider>() == null)
         {
             var renderers = root.GetComponentsInChildren<Renderer>();
@@ -395,22 +422,51 @@ public class ModelManager : MonoBehaviour
                 Bounds combined = renderers[0].bounds;
                 for (int i = 1; i < renderers.Length; i++)
                     combined.Encapsulate(renderers[i].bounds);
+                
                 var bc = root.AddComponent<BoxCollider>();
                 bc.center = root.transform.InverseTransformPoint(combined.center);
-                Vector3 lossy = root.transform.lossyScale;
-                bc.size = new Vector3(
-                    Mathf.Abs(lossy.x) > 0.0001f ? combined.size.x / lossy.x : combined.size.x,
-                    Mathf.Abs(lossy.y) > 0.0001f ? combined.size.y / lossy.y : combined.size.y,
-                    Mathf.Abs(lossy.z) > 0.0001f ? combined.size.z / lossy.z : combined.size.z);
+                bc.size = root.transform.InverseTransformVector(combined.size);
+                bc.size = new Vector3(Mathf.Abs(bc.size.x), Mathf.Abs(bc.size.y), Mathf.Abs(bc.size.z));
             }
         }
         
-        grab = root.AddComponent<XRGrabInteractable>();
-        var scaleTransformer = root.AddComponent<XRGeneralGrabTransformer>();
-        scaleTransformer.allowTwoHandedScaling = true;
-        scaleTransformer.clampScaling = true;
-        scaleTransformer.minimumScaleRatio = 0.25f;
-        scaleTransformer.maximumScaleRatio = 2f;
+        // --- Attach transform (grab from the touch point, not the object origin) ---
+        var attachGO = new GameObject("AttachTransform");
+        attachGO.transform.SetParent(root.transform, false);
+        
+        // --- XRGrabInteractable (matches AR demo Cube.prefab) ---
+        var grab = root.AddComponent<XRGrabInteractable>();
+        grab.attachTransform = attachGO.transform;
+        grab.useDynamicAttach = true;
+        grab.matchAttachPosition = true;
+        grab.matchAttachRotation = false;
+        grab.snapToColliderVolume = false;
+        grab.attachEaseInTime = 0.15f;
+        grab.movementType = XRGrabInteractable.MovementType.Instantaneous;
+        grab.trackPosition = true;
+        grab.trackRotation = true;
+        grab.trackScale = true;
+        grab.throwOnDetach = false;
+        grab.retainTransformParent = true;
+        
+        // --- AR-aware transformer (plane-constrained drag + pinch-to-scale) ---
+        #if AR_FOUNDATION_PRESENT
+        var arTransformer = root.AddComponent<ARTransformer>();
+        arTransformer.objectPlaneTranslationMode = ARTransformer.PlaneTranslationMode.Any;
+        arTransformer.useInteractorOrientation = false;
+        arTransformer.minScale = 0.25f;
+        arTransformer.maxScale = 2f;
+        arTransformer.scaleSensitivity = 0.75f;
+        arTransformer.elasticity = 0.15f;
+        arTransformer.enableElasticBreakLimit = true;
+        arTransformer.elasticBreakLimit = 0.5f;
+        #else
+        var fallback = root.AddComponent<XRGeneralGrabTransformer>();
+        fallback.allowTwoHandedScaling = true;
+        fallback.clampScaling = true;
+        fallback.minimumScaleRatio = 0.25f;
+        fallback.maximumScaleRatio = 2f;
+        #endif
     }
     
     /// <summary>
@@ -552,6 +608,7 @@ public class ModelManager : MonoBehaviour
                             spawnPosition = trackable.center;
                             spawnNormal = trackable.normal;
                             foundARPlane = true;
+                            Debug.Log($"Using AR plane position");
                             break;
                         }
                     }
@@ -567,8 +624,8 @@ public class ModelManager : MonoBehaviour
                         cameraForward.y = 0;
                         cameraForward.Normalize();
                         float distance = Mathf.Clamp(defaultSpawnOffset.z, minSpawnDistance, maxSpawnDistance);
-                        spawnPosition = mainCamera.transform.position + cameraForward * distance;
-                        spawnPosition.y = mainCamera.transform.position.y;
+                        spawnPosition = mainCamera.transform.position + mainCamera.transform.forward * 1.3f;
+                        Debug.Log($"Using AR camera position");
                     }
                 }
                 
@@ -595,6 +652,7 @@ public class ModelManager : MonoBehaviour
                 // Scale model to 10x smaller (0.1x scale)
                 modelContainer.transform.localScale = Vector3.one * 0.7f;
                 
+                EnableDoubleSidedRendering(modelContainer);
                 EnsureMovableAndScalable(modelContainer);
                 
                 if (statusText != null)

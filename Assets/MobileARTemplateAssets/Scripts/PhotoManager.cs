@@ -197,8 +197,18 @@ public class PhotoManager : MonoBehaviour
                         Texture2D texture = NativeGallery.LoadImageAtPath(path, 2048);
                         if (texture != null)
                         {
-                            selectedPhotos.Add(texture);
-                            Debug.Log($"Added photo: {path} ({texture.width}x{texture.height})");
+                            // GPU blit + ReadPixels to guarantee CPU-readable pixels on iOS
+                            RenderTexture rt = RenderTexture.GetTemporary(texture.width, texture.height, 0);
+                            Graphics.Blit(texture, rt);
+                            RenderTexture previous = RenderTexture.active;
+                            RenderTexture.active = rt;
+                            Texture2D readableTexture = new Texture2D(texture.width, texture.height, TextureFormat.RGB24, false);
+                            readableTexture.ReadPixels(new Rect(0, 0, texture.width, texture.height), 0, 0);
+                            readableTexture.Apply();
+                            RenderTexture.active = previous;
+                            RenderTexture.ReleaseTemporary(rt);
+                            Destroy(texture);
+                            selectedPhotos.Add(readableTexture);
                         }
                         else
                         {
